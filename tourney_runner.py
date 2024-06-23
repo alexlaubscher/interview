@@ -8,7 +8,7 @@ from supabase import create_client, Client
 
 def main(tourney_name, year):
     url = "https://doexbjnbwrdfoisqigop.supabase.co"
-    key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZXhiam5id3JkZm9pc3FpZ29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTM5NzM4MDEsImV4cCI6MjAwOTU0OTgwMX0.wI83OVGNNAy33FX903iKSyb4fAAPb5xIA0x1SGkQ2KI"
+    key = "xyzxyz.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZXhiam5id3JkZm9pc3FpZ29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTM5NzM4MDEsImV4cCI6MjAwOTU0OTgwMX0.wI83OVGNNAy33FX903iKSyb4fAAPb5xIA0x1SGkQ2KI"
     supabase: Client = create_client(url, key)
 
     tourney_id = str(uuid.uuid4())
