@@ -24,18 +24,14 @@ def main(tourney_name, year):
     with open('scoring/underdog_scoring.json', 'r') as scoring_file:
         scoring = json.load(scoring_file)
 
-    # Generate the distribution of players and put them in drafts
     ids, entry_count = generate_entrant_distribution(rules['entrants'])
     drafts = allocate_to_drafts(ids, rules['draft_size'])
 
-    # Generate a player pool ahead of time
     player_pool = PlayerPool(year)
 
-    # Get all of the player-game data for the year
     pg_table = supabase.table('player_game').select('player_id, name, week, fantasy_points').eq('year', str(year)).execute().data
     pg_dict = {(p['name'], p['week']): p for p in pg_table}
 
-    # Draft the players
     all_rows_to_add = []
     entrants_added = 0
     batch = 1
@@ -49,7 +45,6 @@ def main(tourney_name, year):
         current_draft = Draft(year, teams, rules['rounds'], player_pool)
         current_draft.run_draft()
 
-        # Set scores for each team for each week
         teams_as_rows = []
         for team_obj in current_draft.teams:
             row_to_add = get_scores(team_obj.roster, pg_dict, scoring)
@@ -60,7 +55,6 @@ def main(tourney_name, year):
             # Add each one to data_to_add
             teams_as_rows.append(row_to_add)
         
-        # Ranking the group based on score
         sorted_teams = sorted(teams_as_rows, key=lambda x: x['regular_season_score'], reverse=True)
         for i, team in enumerate(sorted_teams):
             team['regular_season_ranking'] = i + 1
@@ -80,7 +74,6 @@ def main(tourney_name, year):
     # TODO add this when I begin simming for BBM5
     # Assign regular season payouts (if that exists in rules json)
 
-    # Let's do the playoffs now.
     # TODO this assumes the top 2 teams advance. Is not a safe assumption.
     week_15_teams = supabase.table(table_name).select('*').in_('regular_season_ranking', [1,2]).eq('tourney_id', tourney_id).execute().data
     week_16_teams = run_playoff_week(week_15_teams, 15, rules)
@@ -96,22 +89,20 @@ def generate_entrant_distribution(total_entries=600000):
     entry_count = {}  # To hold the number of entries per person
 
     while entries_remaining > 0:
-        if entries_remaining > 150:  # When more than 150 entries are left
-            if np.random.rand() < 0.4:  # 45% chance to be in low range
+        if entries_remaining > 150:  
+            if np.random.rand() < 0.4:  
                 entries = np.random.randint(1, 21)
-            elif np.random.rand() > 0.70:  # 10% chance to be in mid range
+            elif np.random.rand() > 0.70: 
                 entries = np.random.randint(21, 148)
-            else:  # 45% chance to be in high range
+            else:  
                 entries = np.random.randint(148, 151)
-        else:  # When 150 or fewer entries are left
-            entries = entries_remaining  # Take the remaining entries
+        else:  
+            entries = entries_remaining  
 
-        # Record these entries
         person_id = str(uuid.uuid4())
         person_ids.extend([person_id] * entries)
         entry_count[person_id] = entries
 
-        # Update remaining entries and person ID
         entries_remaining -= entries
 
     random.shuffle(person_ids)
@@ -127,15 +118,11 @@ def allocate_to_drafts(ids, num_per_draft=12):
         # Pop the player on the end
         player_to_add = pool.popleft()
 
-        # Check if already in this draft
         if player_to_add in current_draft and len(pool) > 12:
-            # If already in send to the end of deque, reshuffle, and break
             pool.append(player_to_add)
             continue
         else:
-            # Else append to list
             current_draft.append(player_to_add)
-            # If len(list) == 12 generate a draft id and add it all to the dictionary
             if len(current_draft) == num_per_draft:
                 draft_id = str(uuid.uuid4())
                 drafts[draft_id] = current_draft
@@ -157,18 +144,15 @@ def get_scores(roster, pg_dict, scoring):
     # Fix up the roster json and save it
     row_for_table['roster'] = roster
 
-    # For each week calculate the best score
     for week in range(1, 18):
         weekly_total = 0
         list_of_scores = {'QB': [], 'RB': [], 'WR': [], 'TE': []}
 
         for player in roster:
-            # Find the name, week combo in the pg_table
             tuple_key = (player['name'], week)
             score = pg_dict.get(tuple_key, {}).get('fantasy_points', 0)
             list_of_scores[player['position']].append(score)
         
-        # Sort the lists
         for key in list_of_scores:
             list_of_scores[key].sort()
         
@@ -177,7 +161,6 @@ def get_scores(roster, pg_dict, scoring):
         weekly_total += sum([list_of_scores['WR'].pop() if list_of_scores['WR'] else 0 for _ in range(3)])
         weekly_total += sum([list_of_scores['TE'].pop() if list_of_scores['TE'] else 0 for _ in range(1)])
 
-        # Find the flex player
         weekly_total += max(
             list_of_scores['RB'].pop() if list_of_scores['RB'] else 0, 
             list_of_scores['WR'].pop() if list_of_scores['WR'] else 0, 
@@ -193,7 +176,6 @@ def get_scores(roster, pg_dict, scoring):
         elif week == 17:
             week_17_score += weekly_total
         
-    # Now let's create the row of the table
     row_for_table['regular_season_score'] = round(regular_season_score, 2)
     row_for_table['week_15_score'] = round(week_15_score, 2)
     row_for_table['week_16_score'] = round(week_16_score, 2)
