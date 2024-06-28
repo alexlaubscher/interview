@@ -71,10 +71,6 @@ def main(tourney_name, year):
 
     batch_upload(supabase, all_rows_to_add, table_name)
 
-    # TODO add this when I begin simming for BBM5
-    # Assign regular season payouts (if that exists in rules json)
-
-    # TODO this assumes the top 2 teams advance. Is not a safe assumption.
     week_15_teams = supabase.table(table_name).select('*').in_('regular_season_ranking', [1,2]).eq('tourney_id', tourney_id).execute().data
     week_16_teams = run_playoff_week(week_15_teams, 15, rules)
     week_17_teams = run_playoff_week(week_16_teams, 16, rules)
@@ -85,8 +81,8 @@ def main(tourney_name, year):
 
 def generate_entrant_distribution(total_entries=600000):
     entries_remaining = total_entries
-    person_ids = []  # Will hold each entry as a person_id
-    entry_count = {}  # To hold the number of entries per person
+    person_ids = []
+    entry_count = {}
 
     while entries_remaining > 0:
         if entries_remaining > 150:  
@@ -129,10 +125,6 @@ def allocate_to_drafts(ids, num_per_draft=12):
                 current_draft = []
     return drafts
 
-
-#TODO this doesn't allow for different scoring systems.
-# Please update how this logic works
-# It will default to Underdog 0.5 PPR
 def get_scores(roster, pg_dict, scoring):
     regular_season_score = 0
     week_15_score = 0
@@ -140,8 +132,6 @@ def get_scores(roster, pg_dict, scoring):
     week_17_score = 0
     row_for_table = {}
     
-    # TODO: Trim down the roster json to make more efficient
-    # Fix up the roster json and save it
     row_for_table['roster'] = roster
 
     for week in range(1, 18):
@@ -181,7 +171,6 @@ def get_scores(roster, pg_dict, scoring):
     row_for_table['week_16_score'] = round(week_16_score, 2)
     row_for_table['week_17_score'] = round(week_17_score, 2)
 
-    # Sum weeks 1-14, pull week 15, 16, 17 separately 
     return row_for_table
 
 
